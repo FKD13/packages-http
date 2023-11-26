@@ -69,7 +69,7 @@
 :- autoload(mimetype,[file_mime_type/2]).
 :- autoload(library(apply),[maplist/2]).
 :- autoload(library(base64),[base64/2]).
-:- autoload(library(debug),[debug/3,debugging/1]).
+:- use_module(library(debug),[debug/3,debugging/1]).
 :- autoload(library(error),[syntax_error/1,domain_error/2]).
 :- autoload(library(lists),[append/3,member/2,select/3,delete/3]).
 :- autoload(library(memfile),
@@ -779,9 +779,7 @@ http_update_encoding(Header0, utf8, [content_type(Type)|Header]) :-
     atom_concat(B, '; charset=UTF-8', Type).
 http_update_encoding(Header, Encoding, Header) :-
     memberchk(content_type(Type), Header),
-    (   (   sub_atom(Type, _, _, _, 'UTF-8')
-        ;   sub_atom(Type, _, _, _, 'utf-8')
-        )
+    (   sub_atom_icasechk(Type, _, 'utf-8')
     ->  Encoding = utf8
     ;   http:mime_type_encoding(Type, Encoding)
     ->  true
@@ -794,13 +792,15 @@ http_update_encoding(Header, octet, Header).
 %   Encoding is the (default) character encoding for MimeType. Hooked by
 %   http:mime_type_encoding/2.
 
-mime_type_encoding('application/json',         utf8).
-mime_type_encoding('application/jsonrequest',  utf8).
-mime_type_encoding('application/x-prolog',     utf8).
-mime_type_encoding('application/n-quads',      utf8).
-mime_type_encoding('application/n-triples',    utf8).
-mime_type_encoding('application/sparql-query', utf8).
-mime_type_encoding('application/trig',         utf8).
+mime_type_encoding('application/json',                utf8).
+mime_type_encoding('application/jsonrequest',         utf8).
+mime_type_encoding('application/x-prolog',            utf8).
+mime_type_encoding('application/n-quads',             utf8).
+mime_type_encoding('application/n-triples',           utf8).
+mime_type_encoding('application/sparql-query',        utf8).
+mime_type_encoding('application/trig',                utf8).
+mime_type_encoding('application/sparql-results+json', utf8).
+mime_type_encoding('application/sparql-results+xml',  utf8).
 
 %!  http:mime_type_encoding(+MimeType, -Encoding) is semidet.
 %
@@ -941,6 +941,16 @@ content_length_in_encoding(Enc, Stream, Bytes) :-
 %
 %     * html(+Tokens)
 %     Result of html//1 from html_write.pl
+%
+%     * json(+Term)
+%     Posting a JSON query and processing the JSON reply (or any other
+%     reply understood by http_read_data/3) is simple as
+%     =|http_post(URL, json(Term), Reply, [])|=, where Term is a JSON
+%     term as described in json.pl and reply is of the same format if
+%     the server replies with JSON, when using module =|:-
+%     use_module(library(http/http_json))|=. Note that the module is
+%     used in both http server and http client, see
+%     library(http/http_json).
 %
 %     * xml(+Term)
 %     Post the result of xml_write/3 using the Mime-type

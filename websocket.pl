@@ -44,7 +44,7 @@
             ws_property/2               % +WebSocket, ?Property
           ]).
 :- autoload(library(base64),[base64//1]).
-:- autoload(library(debug),[debug/3]).
+:- use_module(library(debug),[debug/3]).
 :- autoload(library(error),
 	    [permission_error/3,must_be/2,type_error/2,domain_error/2]).
 :- autoload(library(lists),[member/2]).
@@ -230,11 +230,11 @@ http_upgrade_to_websocket(Goal, Options, Request) :-
     debug(websocket(open), 'Subprotocol: ~p', [SubProtocol]),
     http_switch_protocol(
         open_websocket(Goal, SubProtocol, Options),
-        [ header([ upgrade(websocket),
-                   connection('Upgrade'),
-                   sec_websocket_accept(AcceptKey)
-                 | ExtraHeaders
-                 ])
+        [ headers([ upgrade(websocket),
+                    connection('Upgrade'),
+                    sec_websocket_accept(AcceptKey)
+                  | ExtraHeaders
+                  ])
         ]).
 
 choose_subprotocol(Info, Options, SubProtocol, ExtraHeaders) :-

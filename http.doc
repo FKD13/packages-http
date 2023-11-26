@@ -323,13 +323,13 @@ handle_request(Request) :-
 \end{code}
 
 
-\input{httpdispatch.tex}
-\input{httpdirindex.tex}
-\input{httpfiles.tex}
+\InputIfFileExists{httpdispatch.tex}{}{}
+\InputIfFileExists{httpdirindex.tex}{}{}
+\InputIfFileExists{httpfiles.tex}{}{}
 \InputIfFileExists{httpsession.tex}{}{}
-\input{httpcors.tex}
-\input{httpauthenticate.tex}
-\input{httpdigest.tex}
+\InputIfFileExists{httpcors.tex}{}{}
+\InputIfFileExists{httpauthenticate.tex}{}{}
+\InputIfFileExists{httpdigest.tex}{}{}
 \InputIfFileExists{httpdynworkers.tex}{}{}
 
 \subsection{Custom Error Pages}
@@ -1119,9 +1119,8 @@ If ---for whatever reason--- the conversion is not possible it simply
 unifies \arg{RelPath} to \arg{AbsPath}.
 \end{description}
 
-\input{httphost}
-
-\input{httplog}
+\InputIfFileExists{httphost}{}{}
+\InputIfFileExists{httplog}{}{}
 
 \subsection{Debugging HTTP servers}			\label{sec:http-debug}
 
@@ -1559,8 +1558,36 @@ that can be done at compile-time.
 \input{jswrite}
 \input{httppath}
 \input{htmlhead}
-\input{httppwp}
+\InputIfFileExists{httppwp}{}{}
 
+\section{HTTP and IPv6}
+\label{sec:http-ipv6}
+
+As of version 9.1.5, SWI-Prolog supports IPv6.  This has few implications
+for the HTTP package because most aspects are handled by \pllib{socket}
+and \pllib{uri}.  This sections highlights a few aspects.
+
+The \jargon{client libraries} use http_open/3, which in turn uses
+tcp_connect/3.  This causes the client to use addresses returned by
+host_address/3, which is based on the C API getaddrinfo(), in the
+order provided by getaddrinfo().  The URL is parsed using \pllib{uri},
+which allows enclosing IPv6 addresses in \verb$[]$.  The query below
+accesses an IPv6 server on localhost at port 8080
+
+\begin{code}
+?- http_open('http://[::1]:8080', Stream, []).
+\end{code}
+
+The predicate http_server/2 can be used to create an IPv6 server using
+one of the queries below.  The first binds to all interfaces.  The
+second only binds to the IPv6 equivalent of \const{localhost}.  Note
+that the IPv6 address needs to be quoted to create the desired
+\arg{Host}:\arg{Port} term.
+
+\begin{code}
+?- http_server('::':8080, []).
+?- http_server('::1':8080, []).
+\end{code}
 
 \section{Transfer encodings}
 \label{sec:transfer}
@@ -1597,8 +1624,8 @@ on another stream.  See online documentation at
 \url{http://www.swi-prolog.org/} for details.
 \end{description}
 
-\input{websocket.tex}
-\input{hub.tex}
+\InputIfFileExists{websocket.tex}{}{}
+\InputIfFileExists{hub.tex}{}{}
 \input{json.tex}
 
 

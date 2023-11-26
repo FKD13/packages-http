@@ -73,7 +73,7 @@
           ]).
 :- use_module(html_quasiquotations, [html/4]).
 :- autoload(library(apply),[maplist/3,maplist/4]).
-:- autoload(library(debug),[debug/3]).
+:- use_module(library(debug),[debug/3]).
 :- autoload(library(error),
 	    [must_be/2,domain_error/2,instantiation_error/1]).
 :- autoload(library(lists),
@@ -1187,18 +1187,20 @@ layout(h4,         2-0, 0-2).
 
 layout(iframe,     1-1, 1-1).
 
-layout(hr,         1-1, empty).         % empty elements
-layout(br,         0-1, empty).
-layout(img,        0-0, empty).
-layout(meta,       1-1, empty).
-layout(base,       1-1, empty).
-layout(link,       1-1, empty).
-layout(input,      0-0, empty).
-layout(frame,      1-1, empty).
-layout(col,        0-0, empty).
 layout(area,       1-0, empty).
+layout(base,       1-1, empty).
+layout(br,         0-1, empty).
+layout(col,        0-0, empty).
+layout(embed,      1-1, empty).
+layout(hr,         1-1, empty).         % empty elements
+layout(img,        0-0, empty).
 layout(input,      1-0, empty).
+layout(link,       1-1, empty).
+layout(meta,       1-1, empty).
 layout(param,      1-0, empty).
+layout(source,     1-0, empty).
+layout(track,	   1-0, empty).
+layout(wbr,	   0-0, empty).
 
 layout(p,          2-1, -).             % omited close
 layout(td,         0-0, 0-0).
@@ -1249,7 +1251,8 @@ write_html([nl(N)|T], Out) :-
     write_html(T2, Out).
 write_html([mailbox(_, Box)|T], Out) :-
     !,
-    (   Box = accept(_, Accepted)
+    (   Box = accept(_, Accepted),
+        nonvar(Accepted)
     ->  write_html(Accepted, Out)
     ;   true
     ),

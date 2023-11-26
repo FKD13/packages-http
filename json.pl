@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2007-2021, University of Amsterdam
+    Copyright (c)  2007-2023, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
                               SWI-Prolog Solutions b.v.
@@ -51,7 +51,6 @@
             atom_json_dict/3            % ?Atom, ?JSONDict, +Options
           ]).
 :- use_module(library(record)).
-:- use_module(library(memfile)).
 :- use_module(library(error)).
 :- use_module(library(option)).
 :- use_module(library(lists)).
@@ -143,16 +142,14 @@ default_json_dict_options(
 %   _write_ mode (JSONTerm to Atom), the option
 %
 %       * as(Type)
-%       defines the output type, which is one of =atom= (default),
-%       =string=, =codes= or =chars=.
+%       defines the output type, which is one of `atom` (default),
+%       `string`, `codes` or `chars`.
 
 atom_json_term(Atom, Term, Options) :-
     ground(Atom),
     !,
     setup_call_cleanup(
-        ( atom_to_memory_file(Atom, MF),
-          open_memory_file(MF, read, In, [free_on_close(true)])
-        ),
+        open_string(Atom, In),
         json_read(In, Term, Options),
         close(In)).
 atom_json_term(Result, Term, Options) :-
@@ -387,16 +384,46 @@ escape(0'n, _, 0'\n) :- !.
 escape(0'r, _, 0'\r) :- !.
 escape(0't, _, 0'\t) :- !.
 escape(0'u, Stream, C) :-
-    !,
-    get_code(Stream, C1),
-    get_code(Stream, C2),
-    get_code(Stream, C3),
-    get_code(Stream, C4),
-    code_type(C1, xdigit(D1)),
-    code_type(C2, xdigit(D2)),
-    code_type(C3, xdigit(D3)),
-    code_type(C4, xdigit(D4)),
+    get_XXXX(Stream, H),
+    (   hi_surrogate(H)
+    ->  get_surrogate_tail(Stream, H, C)
+    ;   C = H
+    ).
+
+get_XXXX(Stream, C) :-
+    get_xdigit(Stream, D1),
+    get_xdigit(Stream, D2),
+    get_xdigit(Stream, D3),
+    get_xdigit(Stream, D4),
     C is D1<<12+D2<<8+D3<<4+D4.
+
+get_xdigit(Stream, D) :-
+    get_code(Stream, C),
+    code_type(C, xdigit(D)),
+    !.
+get_xdigit(Stream, _) :-
+    syntax_error(hexdigit_expected, Stream).
+
+get_surrogate_tail(Stream, Hi, Codepoint) :-
+    (   get_code(Stream, 0'\\),
+        get_code(Stream, 0'u),
+        get_XXXX(Stream, Lo),
+        surrogate([Hi, Lo], Codepoint)
+    ->  true
+    ;   syntax_error(illegal_surrogate_pair, Stream)
+    ).
+
+
+hi_surrogate(C) :-
+    C >= 0xD800, C < 0xDC00.
+
+lo_surrogate(C) :-
+    C >= 0xDC00, C < 0xE000.
+
+surrogate([Hi, Lo], Codepoint) :-
+    hi_surrogate(Hi),
+    lo_surrogate(Lo),
+    Codepoint is (Hi - 0xD800) * 0x400 + (Lo - 0xDC00) + 0x10000.
 
 json_read_constant(0't, Stream, true) :-
     !,
@@ -1091,3 +1118,6 @@ json_syntax_error(illegal_comment) -->
     [ 'Illegal comment' ].
 json_syntax_error(illegal_string_escape) -->
     [ 'Illegal escape sequence in string' ].
+json_syntax_error(illegal_surrogate_pair) -->
+    [ 'Illegal escaped surrogate pair in string' ].
+
